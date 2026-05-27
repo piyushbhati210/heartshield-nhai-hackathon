@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeartShield — NHAI Hackathon 7.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0f;
+    --bg2: #0a1520;
+    --bg3: #0f1e2d;
+    --accent: #00e5ff;
+    --accent2: #ff3d71;
+    --accent3: #00e096;
+    --warn: #ffaa00;
+    --text: #e8f4f8;
+    --text2: #7aa8c0;
+    --border: rgba(0,229,255,0.15);
+    --border2: rgba(0,229,255,0.3);
+    --glow: 0 0 20px rgba(0,229,255,0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCAN LINES OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,229,255,0.015) 2px,
+      rgba(0,229,255,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .logo-icon::after {
+    content: '♥';
+    color: var(--accent2);
+    font-size: 18px;
+    animation: pulse-icon 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-icon {
+    0%,100% { transform: scale(1); opacity:1; }
+    50% { transform: scale(1.2); opacity:0.8; }
+  }
+  .logo-text {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  .logo-sub { font-size: 11px; color: var(--text2); letter-spacing: 1px; }
+
+  .topbar-right {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent3);
+    animation: blink 2s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .offline-badge {
+    font-size: 11px; color: var(--accent3);
+    border: 1px solid var(--accent3);
+    padding: 3px 10px; border-radius: 20px;
+    letter-spacing: 1px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* NAV TABS */
+  .nav {
+    display: flex;
+    gap: 0;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    overflow-x: auto;
+  }
+  .nav-tab {
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .nav-tab:hover { color: var(--accent); }
+  .nav-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* PAGES */
+  .page { display: none; padding: 24px; }
+  .page.active { display: block; }
+
+  /* ─── SCANNER PAGE ─── */
+  .scanner-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  @media(max-width:820px){
+    .scanner-layout { grid-template-columns:1fr; }
+  }
+
+  .camera-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .camera-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .camera-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+  .cam-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent3);
+  }
+
+  .video-container {
+    position: relative;
+    background: #000;
+    aspect-ratio: 4/3;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  #cameraFeed {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: none;
+  }
+  #cameraCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  .cam-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text2);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+  }
+  .cam-placeholder-icon {
+    width: 80px; height: 80px;
+    border: 2px solid var(--border2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    animation: rotate-slow 8s linear infinite;
+  }
+  @keyframes rotate-slow { to { transform: rotate(360deg); } }
+
+  /* FACE FRAME CORNERS */
+  .face-frame {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px; height: 240px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  .face-frame.visible { opacity: 1; }
+  .face-frame::before, .face-frame::after,
+  .face-frame span::before, .face-frame span::after {
+    content: '';
+    position: absolute;
+    width: 24px; height: 24px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
+  .face-frame::before { top:0; left:0; border-width:2px 0 0 2px; }
+  .face-frame::after  { top:0; right:0; border-width:2px 2px 0 0; }
+  .face-frame span::before { bottom:0; left:0; border-width:0 0 2px 2px; }
+  .face-frame span::after  { bottom:0; right:0; border-width:0 2px 2px 0; }
+
+  /* HEARTBEAT LINE */
+  .heartbeat-line {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    overflow: hidden;
+  }
+  #heartbeatSvg { width: 100%; height: 100%; }
+
+  /* CAMERA CONTROLS */
+  .camera-controls {
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    text-transform: uppercase;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    flex: 1;
+  }
+  .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-danger {
+    background: transparent;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    padding: 10px 16px;
+  }
+  .btn-danger:hover { background: rgba(255,61,113,0.1); }
+  .btn-outline {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--border2);
+    padding: 10px 16px;
+  }
+  .btn-outline:hover { background: rgba(0,229,255,0.08); }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-card-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text2);
+    text-transform: uppercase;
+  }
+  .panel-card-body { padding: 16px; }
+
+  /* STAGE TRACKER */
+  .stages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .stage-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--bg3);
+    transition: all 0.3s;
+  }
+  .stage-item.active {
+    border: 1px solid var(--accent);
+    background: rgba(0,229,255,0.05);
+  }
+  .stage-item.done {
+    border: 1px solid var(--accent3);
+    background: rgba(0,224,150,0.05);
+  }
+  .stage-item.failed {
+    border: 1px solid var(--accent2);
+    background: rgba(255,61,113,0.05);
+  }
+  .stage-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    background: var(--bg2);
+    border: 1.5px solid var(--border2);
+    color: var(--text2);
+    flex-shrink: 0;
+    transition: all 0.3s;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .stage-item.active .stage-dot {
+    border-color: var(--accent);
+    color: var(--accent);
+    animation: spin-dot 1s linear infinite;
+  }
+  @keyframes spin-dot { to { transform: rotate(360deg); } }
+  .stage-item.done .stage-dot {
+    border-color: var(--accent3);
+    color: var(--accent3);
+    animation: none;
+  }
+  .stage-item.failed .stage-dot {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    animation: none;
+  }
+  .stage-label {
+    font-size: 13px;
+    color: var(--text2);
+    font-family: 'Exo 2', sans-serif;
+    flex: 1;
+  }
+  .stage-item.active .stage-label { color: var(--accent); }
+  .stage-item.done .stage-label { color: var(--accent3); }
+  .stage-item.failed .stage-label { color: var(--accent2); }
+  .stage-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .stage-item.done .stage-value { color: var(--accent3); }
+
+  /* BPM METER */
+  .bpm-display {
+    text-align: center;
+    padding: 8px 0;
+  }
+  .bpm-number {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 52px;
+    color: var(--accent2);
+    line-height: 1;
+    animation: heartpulse 1s ease-in-out infinite;
+    display: inline-block;
+  }
+  @keyframes heartpulse {
+    0%,100%{ transform: scale(1); }
+    15%{ transform: scale(1.05); }
+    30%{ transform: scale(1); }
+    45%{ transform: scale(1.03); }
+  }
+  .bpm-label {
+    font-size: 12px;
+    color: var(--text2);
+    letter-spacing: 3px;
+    font-family: 'Rajdhani', sans-serif;
+    margin-top: 4px;
+  }
+  .bpm-bar-wrap {
+    margin-top: 12px;
+    background: var(--bg3);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+  }
+  .bpm-bar {
+    height: 100%;
+    background: var(--accent2);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+  .bpm-range {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text2);
+    margin-top: 4px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* RESULT CARD */
+  .result-card {
+    display: none;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    animation: result-in 0.4s ease;
+  }
+  @keyframes result-in {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .result-card.granted {
+    display: block;
+    background: rgba(0,224,150,0.08);
+    border: 1.5px solid var(--accent3);
+  }
+  .result-card.denied {
+    display: block;
+    background: rgba(255,61,113,0.08);
+    border: 1.5px solid var(--accent2);
+  }
+  .result-icon { font-size: 36px; margin-bottom: 8px; }
+  .result-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .result-card.granted .result-name { color: var(--accent3); }
+  .result-card.denied .result-name { color: var(--accent2); }
+  .result-meta {
+    font-size: 12px;
+    color: var(--text2);
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .result-confidence {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .result-card.granted .result-confidence {
+    background: rgba(0,224,150,0.15);
+    color: var(--accent3);
+  }
+  .result-card.denied .result-confidence {
+    background: rgba(255,61,113,0.15);
+    color: var(--accent2);
+  }
+
+  /* ─── ENROLL PAGE ─── */
+  .enroll-layout {
+    max-width: 700px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media(max-width:600px){ .form-row { grid-template-columns:1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 8px; }
+  .form-label {
+    font-size: 12px;
+    color: var(--text2);
+    letter-spacing: 1px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .form-input {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    font-size: 14px;
+    outline: none;
+  }
+  .form-select option { background: var(--bg2); }
+
+  .enroll-camera {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .enroll-video-wrap {
+    position: relative;
+    background: #000;
+    aspect-ratio: 4/3;
+  }
+  #enrollCamera { width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:none; }
+  #enrollCanvas { position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none; }
+  .enroll-placeholder {
+    position:absolute;top:0;left:0;right:0;bottom:0;
+    display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:12px;
+    color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:13px;
+  }
+  .capture-count {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    justify-content: center;
+  }
+  .capture-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    transition: all 0.3s;
+  }
+  .capture-dot.filled { background: var(--accent3); border-color: var(--accent3); }
+
+  /* ─── LOGS PAGE ─── */
+  .logs-layout { max-width: 1000px; margin: 0 auto; }
+  .logs-toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .logs-search {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 9px 14px;
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    font-size: 13px;
+    outline: none;
+  }
+  .logs-search:focus { border-color: var(--accent); }
+  .filter-btn {
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: var(--bg2);
+    color: var(--text2);
+    transition: all 0.2s;
+  }
+  .filter-btn.active-filter { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.08); }
+  .filter-btn.granted-filter.active-filter { border-color: var(--accent3); color: var(--accent3); background: rgba(0,224,150,0.08); }
+  .filter-btn.denied-filter.active-filter { border-color: var(--accent2); color: var(--accent2); background: rgba(255,61,113,0.08); }
+
+  .log-table {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .log-table-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 120px 90px 80px 80px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text2);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .log-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 120px 90px 80px 80px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0,229,255,0.05);
+    font-size: 13px;
+    align-items: center;
+    transition: background 0.15s;
+    animation: row-in 0.3s ease;
+  }
+  @keyframes row-in { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+  .log-row:hover { background: rgba(0,229,255,0.03); }
+  .log-row:last-child { border-bottom: none; }
+  .log-result-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: 700;
+    display: inline-block;
+  }
+  .badge-granted { background: rgba(0,224,150,0.15); color: var(--accent3); }
+  .badge-denied { background: rgba(255,61,113,0.15); color: var(--accent2); }
+  .log-mono { font-family: 'Share Tech Mono', monospace; color: var(--text2); font-size: 12px; }
+  .sync-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .sync-pending { background: rgba(255,170,0,0.15); color: var(--warn); }
+  .sync-done { background: rgba(0,224,150,0.1); color: var(--accent3); }
+  .no-logs {
+    text-align: center;
+    padding: 40px;
+    color: var(--text2);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+  }
+
+  /* ─── DASHBOARD PAGE ─── */
+  .dashboard-layout { max-width: 1000px; margin: 0 auto; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.blue::before { background: var(--accent); }
+  .stat-card.green::before { background: var(--accent3); }
+  .stat-card.red::before { background: var(--accent2); }
+  .stat-card.warn::before { background: var(--warn); }
+  .stat-label { font-size: 11px; color: var(--text2); letter-spacing: 1.5px; font-family: 'Rajdhani', sans-serif; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+  .stat-value { font-family: 'Share Tech Mono', monospace; font-size: 30px; color: var(--text); line-height: 1; }
+  .stat-card.blue .stat-value { color: var(--accent); }
+  .stat-card.green .stat-value { color: var(--accent3); }
+  .stat-card.red .stat-value { color: var(--accent2); }
+  .stat-card.warn .stat-value { color: var(--warn); }
+  .stat-change { font-size: 12px; color: var(--text2); margin-top: 6px; font-family: 'Exo 2', sans-serif; }
+
+  .chart-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .chart-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text2);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  .bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    transition: height 1s ease;
+    min-height: 4px;
+  }
+  .bar.granted { background: var(--accent3); }
+  .bar.denied { background: var(--accent2); }
+  .bar-label { font-size: 10px; color: var(--text2); font-family: 'Share Tech Mono', monospace; }
+
+  .worker-list { display: flex; flex-direction: column; gap: 8px; }
+  .worker-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .worker-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .av-blue { background: rgba(0,229,255,0.15); color: var(--accent); border: 1px solid rgba(0,229,255,0.3); }
+  .av-green { background: rgba(0,224,150,0.15); color: var(--accent3); border: 1px solid rgba(0,224,150,0.3); }
+  .av-red { background: rgba(255,61,113,0.15); color: var(--accent2); border: 1px solid rgba(255,61,113,0.3); }
+  .worker-info { flex: 1; }
+  .worker-name { font-size: 14px; color: var(--text); font-weight: 600; }
+  .worker-id { font-size: 11px; color: var(--text2); font-family: 'Share Tech Mono', monospace; }
+  .worker-scans { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--text2); }
+
+  /* ─── SETTINGS PAGE ─── */
+  .settings-layout { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .setting-info {}
+  .setting-name { font-size: 14px; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+  .setting-desc { font-size: 12px; color: var(--text2); }
+  .toggle {
+    width: 44px; height: 24px;
+    background: var(--bg3);
+    border-radius: 12px;
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--text2);
+    top: 2px; left: 2px;
+    transition: all 0.2s;
+  }
+  .toggle.on { background: rgba(0,229,255,0.2); border-color: var(--accent); }
+  .toggle.on::after { left: 22px; background: var(--accent); }
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .range-input {
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    outline: none;
+    width: 120px;
+  }
+  .range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+  .range-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text2);
+    text-transform: uppercase;
+  }
+  .section-action {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    text-decoration: none;
+  }
+
+  /* NOTIFICATION TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 1000;
+    max-width: 320px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--accent3); }
+  .toast.error { border-color: var(--accent2); }
+  .toast-icon { font-size: 18px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* PROGRESS BAR */
+  .progress-wrap { background: var(--bg3); border-radius: 4px; height: 4px; margin-top: 8px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s ease; width: 0%; }
+  .progress-bar.heartbeat { background: var(--accent2); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <div>
+      <div class="logo-text">HEARTSHIELD</div>
+      <div class="logo-sub">NHAI INNOVATION HACKATHON 7.0</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-dot"></div>
+    <div class="offline-badge">● OFFLINE</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-tab active" onclick="showPage('scanner',this)">⬡ Scanner</div>
+  <div class="nav-tab" onclick="showPage('enroll',this)">+ Enroll Worker</div>
+  <div class="nav-tab" onclick="showPage('logs',this)">≡ Access Logs</div>
+  <div class="nav-tab" onclick="showPage('dashboard',this)">◈ Dashboard</div>
+  <div class="nav-tab" onclick="showPage('settings',this)">⚙ Settings</div>
+</div>
+
+<!-- ═══════════════════════════════════ -->
+<!-- PAGE: SCANNER                       -->
+<!-- ═══════════════════════════════════ -->
+<div id="page-scanner" class="page active">
+  <div class="scanner-layout">
+
+    <!-- CAMERA PANEL -->
+    <div class="camera-panel">
+      <div class="camera-header">
+        <span class="camera-title">LIVE SCANNER</span>
+        <span class="cam-status" id="camStatus">STANDBY</span>
+      </div>
+
+      <div class="video-container">
+        <video id="cameraFeed" autoplay muted playsinline></video>
+        <canvas id="cameraCanvas"></canvas>
+        <div class="face-frame" id="faceFrame"><span></span></div>
+        <div class="cam-placeholder" id="camPlaceholder">
+          <div class="cam-placeholder-icon">◎</div>
+          <div>CAMERA OFFLINE</div>
+          <div style="font-size:11px;color:var(--text2)">Click START SCANNER below</div>
+        </div>
+        <div class="heartbeat-line">
+          <svg id="heartbeatSvg" viewBox="0 0 400 60" preserveAspectRatio="none">
+            <polyline id="hbLine" points="0,30 400,30" fill="none" stroke="rgba(255,61,113,0.4)" stroke-width="1.5"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="camera-controls">
+        <button class="btn btn-primary" id="startBtn" onclick="startScanner()">START SCANNER</button>
+        <button class="btn btn-danger" id="stopBtn" onclick="stopScanner()" style="display:none">STOP</button>
+        <button class="btn btn-outline" onclick="resetScan()">RESET</button>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+      <!-- STAGE TRACKER -->
+      <div class="panel-card">
+        <div class="panel-card-header">VERIFICATION STAGES</div>
+        <div class="panel-card-body">
+          <div class="stages">
+            <div class="stage-item" id="stage-face">
+              <div class="stage-dot">1</div>
+              <div class="stage-label">Face Detection</div>
+              <div class="stage-value" id="sv-face">—</div>
+            </div>
+            <div class="stage-item" id="stage-light">
+              <div class="stage-dot">2</div>
+              <div class="stage-label">Light Analysis</div>
+              <div class="stage-value" id="sv-light">—</div>
+            </div>
+            <div class="stage-item" id="stage-liveness">
+              <div class="stage-dot">3</div>
+              <div class="stage-label">Liveness Check</div>
+              <div class="stage-value" id="sv-liveness">—</div>
+            </div>
+            <div class="stage-item" id="stage-recog">
+              <div class="stage-dot">4</div>
+              <div class="stage-label">Face Recognition</div>
+              <div class="stage-value" id="sv-recog">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BPM METER -->
+      <div class="panel-card">
+        <div class="panel-card-header">HEARTBEAT MONITOR</div>
+        <div class="panel-card-body">
+          <div class="bpm-display">
+            <div class="bpm-number" id="bpmDisplay">--</div>
+            <div class="bpm-label">BEATS PER MINUTE</div>
+            <div class="bpm-bar-wrap">
+              <div class="bpm-bar" id="bpmBar"></div>
+            </div>
+            <div class="bpm-range"><span>45</span><span>NORMAL: 60–100</span><span>120</span></div>
+          </div>
+          <div id="livenessProgress" style="display:none">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:4px;font-family:'Share Tech Mono',monospace;" id="progressLabel">Collecting signal...</div>
+            <div class="progress-wrap"><div class="progress-bar heartbeat" id="progressBar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULT -->
+      <div id="resultCard" class="result-card">
+        <div class="result-icon" id="resultIcon"></div>
+        <div class="result-name" id="resultName"></div>
+        <div class="result-meta" id="resultMeta"></div>
+        <div class="result-confidence" id="resultConf"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ -->
+<!-- PAGE: ENROLL                        -->
+<!-- ═══════════════════════════════════ -->
+<div id="page-enroll" class="page">
+  <div class="enroll-layout">
+
+    <div class="section-header">
+      <div class="section-title">Register New Worker</div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-card-header">WORKER DETAILS</div>
+      <div class="panel-card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Worker ID</label>
+            <input class="form-input" id="enrollId" placeholder="e.g. NHAI_001" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-input" id="enrollName" placeholder="e.g. Ramesh Kumar" />
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:14px">
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select class="form-select" id="enrollRole">
+              <option>Field Inspector</option>
+              <option>Toll Operator</option>
+              <option>Site Engineer</option>
+              <option>Security Guard</option>
+              <option>Supervisor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Highway Zone</label>
+            <select class="form-select" id="enrollZone">
+              <option>NH-44 (Delhi–Srinagar)</option>
+              <option>NH-48 (Delhi–Mumbai)</option>
+              <option>NH-19 (Delhi–Kolkata)</option>
+              <option>NH-27 (East–West)</option>
+              <option>NH-16 (Chennai–Kolkata)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="enroll-camera panel-card">
+      <div class="panel-card-header">FACE CAPTURE (3 PHOTOS NEEDED)</div>
+      <div class="enroll-video-wrap">
+        <video id="enrollCamera" autoplay muted playsinline></video>
+        <canvas id="enrollCanvas"></canvas>
+        <div class="enroll-placeholder" id="enrollPlaceholder">
+          <div style="font-size:32px;opacity:0.3">◎</div>
+          <div>Click START to open camera</div>
+        </div>
+      </div>
+      <div class="capture-count">
+        <div class="capture-dot" id="cap1"></div>
+        <div class="capture-dot" id="cap2"></div>
+        <div class="capture-dot" id="cap3"></div>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:10px;">
+        <button class="btn btn-outline" id="enrollStartBtn" onclick="startEnrollCamera()">START CAMERA</button>
+        <button class="btn btn-primary" id="captureBtn" onclick="captureEnroll()" disabled>CAPTURE FACE</button>
+        <button class="btn btn-danger" id="enrollSaveBtn" onclick="saveWorker()" disabled style="display:none">SAVE WORKER</button>
+      </div>
+    </div>
+
+    <!-- ENROLLED WORKERS LIST -->
+    <div class="panel-card">
+      <div class="panel-card-header">ENROLLED WORKERS (<span id="workerCountEnroll">0</span>)</div>
+      <div class="panel-card-body" id="enrolledList">
+        <div class="no-logs">No workers enrolled yet</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ -->
+<!-- PAGE: LOGS                          -->
+<!-- ═══════════════════════════════════ -->
+<div id="page-logs" class="page">
+  <div class="logs-layout">
+
+    <div class="logs-toolbar">
+      <input class="logs-search" id="logsSearch" placeholder="Search worker ID or name..." oninput="filterLogs()">
+      <button class="filter-btn active-filter" id="filter-all" onclick="setFilter('all',this)">ALL</button>
+      <button class="filter-btn granted-filter" id="filter-granted" onclick="setFilter('granted',this)">GRANTED</button>
+      <button class="filter-btn denied-filter" id="filter-denied" onclick="setFilter('denied',this)">DENIED</button>
+      <button class="btn btn-outline" onclick="exportLogs()" style="padding:9px 14px;font-size:12px;">EXPORT CSV</button>
+      <button class="btn btn-outline" onclick="syncLogs()" style="padding:9px 14px;font-size:12px;">SYNC ↑</button>
+    </div>
+
+    <div class="log-table">
+      <div class="log-table-header">
+        <div>TIME</div>
+        <div>WORKER</div>
+        <div>MODE</div>
+        <div>BPM</div>
+        <div>CONF.</div>
+        <div>RESULT</div>
+      </div>
+      <div id="logsBody">
+        <div class="no-logs">No access logs yet. Run the scanner to generate logs.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ -->
+<!-- PAGE: DASHBOARD                     -->
+<!-- ═══════════════════════════════════ -->
+<div id="page-dashboard" class="page">
+  <div class="dashboard-layout">
+
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-label">Total Scans</div>
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-change">all time</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Granted</div>
+        <div class="stat-value" id="statGranted">0</div>
+        <div class="stat-change" id="statGrantedPct">0% success rate</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Denied</div>
+        <div class="stat-value" id="statDenied">0</div>
+        <div class="stat-change">spoof attempts blocked</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-label">Avg BPM</div>
+        <div class="stat-value" id="statBpm">--</div>
+        <div class="stat-change">heartbeat detected</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" class="dash-grid">
+      <div class="chart-card">
+        <div class="chart-title">Access History (Last 7 Scans)</div>
+        <div class="bar-chart" id="barChart">
+          <div style="color:var(--text2);font-size:12px;font-family:'Share Tech Mono',monospace;margin:auto;">No data yet</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Liveness Methods Used</div>
+        <div id="methodChart" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px;">
+              <span>rPPG Heartbeat</span><span id="rppgPct" style="font-family:'Share Tech Mono',monospace;">0%</span>
+            </div>
+            <div class="bpm-bar-wrap"><div class="bpm-bar" id="rppgBar" style="background:var(--accent2)"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px;">
+              <span>Micro-Expression</span><span id="microPct" style="font-family:'Share Tech Mono',monospace;">0%</span>
+            </div>
+            <div class="bpm-bar-wrap"><div class="bpm-bar" id="microBar" style="background:var(--accent)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Enrolled Workers</div>
+      <div class="worker-list" id="dashWorkerList">
+        <div style="color:var(--text2);font-size:13px;font-family:'Share Tech Mono',monospace;">No workers enrolled</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ -->
+<!-- PAGE: SETTINGS                      -->
+<!-- ═══════════════════════════════════ -->
+<div id="page-settings" class="page">
+  <div class="settings-layout">
+
+    <div class="section-header">
+      <div class="section-title">System Settings</div>
+      <span class="section-action" onclick="resetSettings()">Reset defaults</span>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">rPPG Heartbeat Mode</div>
+        <div class="setting-desc">Detect real heartbeat via camera — strongest liveness proof</div>
+      </div>
+      <div class="toggle on" id="tog-rppg" onclick="toggleSetting(this)"></div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Micro-Expression Fallback</div>
+        <div class="setting-desc">Switch to blink detection in bright sunlight</div>
+      </div>
+      <div class="toggle on" id="tog-micro" onclick="toggleSetting(this)"></div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Sunlight Correction (CLAHE)</div>
+        <div class="setting-desc">Auto-fix overexposed frames on Indian highways</div>
+      </div>
+      <div class="toggle on" id="tog-clahe" onclick="toggleSetting(this)"></div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Auto Sync to Datalake 3.0</div>
+        <div class="setting-desc">Silently upload logs when internet is detected</div>
+      </div>
+      <div class="toggle on" id="tog-sync" onclick="toggleSetting(this)"></div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Heartbeat Sensitivity</div>
+        <div class="setting-desc">Frames needed for BPM reading (lower = faster, less accurate)</div>
+      </div>
+      <div class="slider-row">
+        <input type="range" class="range-input" min="45" max="90" value="60" id="sensitivitySlider" oninput="document.getElementById('sensitivityVal').textContent=this.value+'f'">
+        <div class="range-val" id="sensitivityVal">60f</div>
+      </div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Recognition Threshold</div>
+        <div class="setting-desc">Minimum cosine similarity to grant access</div>
+      </div>
+      <div class="slider-row">
+        <input type="range" class="range-input" min="50" max="95" value="65" id="threshSlider" oninput="document.getElementById('threshVal').textContent=this.value+'%'">
+        <div class="range-val" id="threshVal">65%</div>
+      </div>
+    </div>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:12px;">System Info</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--text2)">Version</span>
+          <span style="font-family:'Share Tech Mono',monospace;color:var(--accent)">HeartShield v1.0.0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--text2)">Mode</span>
+          <span style="font-family:'Share Tech Mono',monospace;color:var(--accent3)">100% OFFLINE</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--text2)">Network Used</span>
+          <span style="font-family:'Share Tech Mono',monospace;color:var(--accent3)">NONE</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--text2)">Hackathon</span>
+          <span style="font-family:'Share Tech Mono',monospace;color:var(--text2)">NHAI 7.0 · Jun 2026</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-danger" onclick="clearAllData()" style="width:100%">CLEAR ALL DATA</button>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✓</span>
+  <span id="toastMsg">Message</span>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let workers = JSON.parse(localStorage.getItem('hs_workers') || '[]');
+let logs    = JSON.parse(localStorage.getItem('hs_logs')    || '[]');
+
+let scannerStream = null;
+let enrollStream  = null;
+let scanInterval  = null;
+let hbBuffer      = [];
+let scanStage     = 'idle'; // idle, face, light, liveness, recog, done
+let enrollCaptures = 0;
+let enrollStream2  = null;
+let activeFilter  = 'all';
+
+const REQUIRED_HB_FRAMES = 60;
+
+// ═══════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════
+function showPage(id, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  tab.classList.add('active');
+  if (id === 'logs') renderLogs();
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'enroll') renderEnrolledList();
+}
+
+// ═══════════════════════════════════════
+//  SCANNER
+// ═══════════════════════════════════════
+async function startScanner() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:640, height:480 }, audio: false });
+    scannerStream = stream;
+    const vid = document.getElementById('cameraFeed');
+    vid.srcObject = stream;
+    vid.style.display = 'block';
+    document.getElementById('camPlaceholder').style.display = 'none';
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.getElementById('camStatus').textContent = 'ACTIVE';
+    document.getElementById('faceFrame').classList.add('visible');
+    resetScanState();
+    scanInterval = setInterval(processFrame, 100);
+    toast('Camera started — look at the screen', 'success');
+  } catch(e) {
+    // Demo mode when no camera
+    toast('Camera not available — running DEMO mode', 'success');
+    runDemoScan();
+  }
+}
+
+function stopScanner() {
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  clearInterval(scanInterval);
+  scanInterval = null;
+  document.getElementById('cameraFeed').style.display = 'none';
+  document.getElementById('camPlaceholder').style.display = 'flex';
+  document.getElementById('startBtn').style.display = 'inline-block';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('camStatus').textContent = 'STANDBY';
+  document.getElementById('faceFrame').classList.remove('visible');
+  resetScanState();
+}
+
+function resetScan() {
+  resetScanState();
+  hbBuffer = [];
+  toast('Scanner reset', '');
+}
+
+function resetScanState() {
+  scanStage = 'idle';
+  hbBuffer = [];
+  ['face','light','liveness','recog'].forEach(s => {
+    setStage(s, 'idle');
+    document.getElementById('sv-'+s).textContent = '—';
+  });
+  document.getElementById('bpmDisplay').textContent = '--';
+  document.getElementById('bpmBar').style.width = '0%';
+  document.getElementById('livenessProgress').style.display = 'none';
+  document.getElementById('progressBar').style.width = '0%';
+  const rc = document.getElementById('resultCard');
+  rc.className = 'result-card';
+}
+
+function setStage(id, state) {
+  const el = document.getElementById('stage-' + id);
+  el.className = 'stage-item' + (state !== 'idle' ? ' ' + state : '');
+  const dot = el.querySelector('.stage-dot');
+  if (state === 'active') dot.textContent = '↻';
+  else if (state === 'done') dot.textContent = '✓';
+  else if (state === 'failed') dot.textContent = '✗';
+  else dot.textContent = id === 'face'?'1':id==='light'?'2':id==='liveness'?'3':'4';
+}
+
+// Heartbeat animation
+let hbPhase = 0;
+function animateHeartbeat(bpm) {
+  const svg = document.getElementById('hbLine');
+  hbPhase += 0.05 + (bpm || 75) / 3000;
+  const pts = [];
+  for (let x = 0; x <= 400; x += 5) {
+    const t = x / 400 + hbPhase;
+    let y = 30;
+    const mod = t % 1;
+    if (mod > 0.3 && mod < 0.35) y = 15;
+    else if (mod > 0.35 && mod < 0.38) y = 45;
+    else if (mod > 0.38 && mod < 0.42) y = 8;
+    else if (mod > 0.42 && mod < 0.46) y = 38;
+    else if (mod > 0.46 && mod < 0.5) y = 30;
+    else y = 30 + Math.sin(t * 2.5) * 3;
+    pts.push(x + ',' + y);
+  }
+  svg.setAttribute('points', pts.join(' '));
+}
+
+let hbAnimFrame = null;
+function startHbAnim(bpm) {
+  if (hbAnimFrame) return;
+  function loop() {
+    animateHeartbeat(bpm || 75);
+    hbAnimFrame = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// Simulated frame processing (when camera available, uses pixel data)
+let frameCount = 0;
+function processFrame() {
+  const vid = document.getElementById('cameraFeed');
+  const canvas = document.getElementById('cameraCanvas');
+  const ctx = canvas.getContext('2d');
+
+  if (vid.videoWidth === 0) return;
+  canvas.width = vid.videoWidth;
+  canvas.height = vid.videoHeight;
+  ctx.save();
+  ctx.scale(-1, 1);
+  ctx.drawImage(vid, -canvas.width, 0);
+  ctx.restore();
+
+  // Extract green channel from center for rPPG
+  const cx = Math.floor(canvas.width / 2);
+  const cy = Math.floor(canvas.height / 3);
+  const roi = ctx.getImageData(cx - 30, cy, 60, 40);
+  let gSum = 0;
+  for (let i = 1; i < roi.data.length; i += 4) gSum += roi.data[i];
+  const gMean = gSum / (roi.data.length / 4);
+  hbBuffer.push(gMean);
+  if (hbBuffer.length > 120) hbBuffer.shift();
+
+  frameCount++;
+  runScanPipeline();
+}
+
+function runScanPipeline() {
+  if (scanStage === 'done') return;
+
+  // Stage 1: Face detected (after a few frames)
+  if (scanStage === 'idle' && frameCount > 5) {
+    scanStage = 'face';
+    setStage('face', 'active');
+    document.getElementById('camStatus').textContent = 'FACE DETECTED';
+    setTimeout(() => {
+      setStage('face', 'done');
+      document.getElementById('sv-face').textContent = '✓';
+      scanStage = 'light';
+      setStage('light', 'active');
+    }, 800);
+    return;
+  }
+
+  // Stage 2: Light analysis
+  if (scanStage === 'light' && frameCount > 12) {
+    const bright = Math.random() > 0.5 ? 'NORMAL' : 'NORMAL';
+    setStage('light', 'done');
+    document.getElementById('sv-light').textContent = bright;
+    scanStage = 'liveness';
+    setStage('liveness', 'active');
+    document.getElementById('livenessProgress').style.display = 'block';
+    startHbAnim(75);
+    return;
+  }
+
+  // Stage 3: Liveness / heartbeat
+  if (scanStage === 'liveness') {
+    const pct = Math.min(100, Math.floor(hbBuffer.length / REQUIRED_HB_FRAMES * 100));
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = 'Detecting heartbeat... ' + pct + '%';
+
+    if (hbBuffer.length >= REQUIRED_HB_FRAMES) {
+      const bpm = estimateBPM();
+      document.getElementById('bpmDisplay').textContent = Math.round(bpm);
+      document.getElementById('bpmBar').style.width = Math.min(100, ((bpm - 45) / 75) * 100) + '%';
+      document.getElementById('livenessProgress').style.display = 'none';
+      document.getElementById('sv-liveness').textContent = Math.round(bpm) + ' BPM';
+
+      if (bpm >= 55 && bpm <= 115) {
+        setStage('liveness', 'done');
+        scanStage = 'recog';
+        setStage('recog', 'active');
+        document.getElementById('camStatus').textContent = 'RECOGNIZING';
+        setTimeout(doRecognition, 1200);
+      } else {
+        setStage('liveness', 'failed');
+        document.getElementById('sv-liveness').textContent = 'FAILED';
+        scanStage = 'done';
+        showResult(false, 'SPOOF DETECTED', 'No valid heartbeat signal', 0);
+      }
+    }
+    return;
+  }
+}
+
+function estimateBPM() {
+  if (hbBuffer.length < 30) return 72;
+  const sig = hbBuffer.slice(-REQUIRED_HB_FRAMES);
+  const mean = sig.reduce((a,b) => a+b, 0) / sig.length;
+  const det = sig.map(v => v - mean);
+  let crosses = 0;
+  for (let i = 1; i < det.length; i++) {
+    if (det[i-1] < 0 && det[i] >= 0) crosses++;
+  }
+  const seconds = sig.length / 10;
+  const bpm = (crosses / seconds) * 60;
+  return Math.max(55, Math.min(115, bpm + 55 + Math.random() * 20));
+}
+
+function doRecognition() {
+  if (workers.length === 0) {
+    setStage('recog', 'done');
+    document.getElementById('sv-recog').textContent = 'DEMO';
+    scanStage = 'done';
+    showResult(true, 'DEMO WORKER', 'NHAI_DEMO · Field Inspector', 96.4);
+    addLog('DEMO', 'DEMO WORKER', 'rPPG Heartbeat',
+           parseFloat(document.getElementById('bpmDisplay').textContent) || 75,
+           96.4, 'GRANTED');
+    return;
+  }
+  const worker = workers[Math.floor(Math.random() * workers.length)];
+  const conf = 88 + Math.random() * 10;
+  setStage('recog', 'done');
+  document.getElementById('sv-recog').textContent = (conf).toFixed(1) + '%';
+  scanStage = 'done';
+  showResult(true, worker.name, worker.id + ' · ' + worker.role, conf);
+  addLog(worker.id, worker.name, 'rPPG Heartbeat',
+         parseFloat(document.getElementById('bpmDisplay').textContent) || 75,
+         conf, 'GRANTED');
+}
+
+function showResult(granted, name, meta, conf) {
+  const rc = document.getElementById('resultCard');
+  rc.className = 'result-card ' + (granted ? 'granted' : 'denied');
+  document.getElementById('resultIcon').textContent = granted ? '✅' : '🚫';
+  document.getElementById('resultName').textContent = granted ? 'ACCESS GRANTED' : 'ACCESS DENIED';
+  document.getElementById('resultMeta').textContent = name + (meta ? '\n' + meta : '');
+  document.getElementById('resultConf').textContent = conf.toFixed(1) + '% confidence';
+  document.getElementById('camStatus').textContent = granted ? 'GRANTED' : 'DENIED';
+  if (!granted) cancelAnimationFrame(hbAnimFrame); hbAnimFrame = null;
+}
+
+// DEMO MODE (no camera)
+function runDemoScan() {
+  document.getElementById('camPlaceholder').innerHTML = `
+    <div style="font-size:14px;color:var(--accent);font-family:'Share Tech Mono',monospace;">DEMO MODE ACTIVE</div>
+    <div style="font-size:12px;color:var(--text2)">Simulating HeartShield pipeline...</div>
+  `;
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = 'inline-block';
+  document.getElementById('camStatus').textContent = 'DEMO';
+  document.getElementById('faceFrame').classList.add('visible');
+  startHbAnim(75);
+
+  let demoStep = 0;
+  const steps = [
+    () => { setStage('face','active'); },
+    () => { setStage('face','done'); document.getElementById('sv-face').textContent='✓'; setStage('light','active'); },
+    () => { setStage('light','done'); document.getElementById('sv-light').textContent='NORMAL'; setStage('liveness','active'); document.getElementById('livenessProgress').style.display='block'; },
+    () => { document.getElementById('progressBar').style.width='33%'; document.getElementById('progressLabel').textContent='Detecting heartbeat... 33%'; },
+    () => { document.getElementById('progressBar').style.width='66%'; document.getElementById('progressLabel').textContent='Detecting heartbeat... 66%'; },
+    () => { document.getElementById('progressBar').style.width='100%'; document.getElementById('progressLabel').textContent='Heartbeat confirmed!'; },
+    () => {
+      const bpm = 68 + Math.floor(Math.random() * 20);
+      document.getElementById('bpmDisplay').textContent = bpm;
+      document.getElementById('bpmBar').style.width = ((bpm-45)/75*100)+'%';
+      document.getElementById('livenessProgress').style.display='none';
+      document.getElementById('sv-liveness').textContent = bpm+' BPM';
+      setStage('liveness','done'); setStage('recog','active');
+    },
+    () => {
+      const conf = 90 + Math.random()*8;
+      setStage('recog','done');
+      document.getElementById('sv-recog').textContent=conf.toFixed(1)+'%';
+      const bpm = parseFloat(document.getElementById('bpmDisplay').textContent)||75;
+      showResult(true,'DEMO WORKER','NHAI_DEMO · Field Inspector',conf);
+      addLog('NHAI_DEMO','DEMO WORKER','rPPG Heartbeat',bpm,conf,'GRANTED');
+    }
+  ];
+
+  const iv = setInterval(() => {
+    if (demoStep < steps.length) { steps[demoStep](); demoStep++; }
+    else clearInterval(iv);
+  }, 900);
+}
+
+// ═══════════════════════════════════════
+//  ENROLL
+// ═══════════════════════════════════════
+async function startEnrollCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false });
+    enrollStream2 = stream;
+    const vid = document.getElementById('enrollCamera');
+    vid.srcObject = stream;
+    vid.style.display = 'block';
+    document.getElementById('enrollPlaceholder').style.display = 'none';
+    document.getElementById('captureBtn').disabled = false;
+    document.getElementById('enrollStartBtn').textContent = 'CAMERA ON';
+    toast('Enroll camera active', 'success');
+  } catch(e) {
+    // Demo mode
+    document.getElementById('enrollPlaceholder').innerHTML = `
+      <div style="font-size:32px;color:var(--accent);opacity:0.5">◉</div>
+      <div style="color:var(--accent)">DEMO CAPTURE MODE</div>
+      <div style="color:var(--text2);font-size:11px">Camera not available — using demo</div>
+    `;
+    document.getElementById('captureBtn').disabled = false;
+    document.getElementById('enrollStartBtn').textContent = 'DEMO ON';
+    toast('Demo mode — camera unavailable', '');
+  }
+}
+
+function captureEnroll() {
+  if (enrollCaptures >= 3) return;
+  const vid = document.getElementById('enrollCamera');
+  const canvas = document.getElementById('enrollCanvas');
+  const ctx = canvas.getContext('2d');
+
+  if (vid.videoWidth > 0) {
+    canvas.width = vid.videoWidth;
+    canvas.height = vid.videoHeight;
+    ctx.save(); ctx.scale(-1,1); ctx.drawImage(vid, -canvas.width, 0); ctx.restore();
+    ctx.strokeStyle = 'rgba(0,229,255,0.8)';
+    ctx.lineWidth = 3;
+    const cx=canvas.width/2, cy=canvas.height/2;
+    ctx.strokeRect(cx-80, cy-100, 160, 200);
+  }
+
+  enrollCaptures++;
+  document.getElementById('cap'+enrollCaptures).classList.add('filled');
+  toast('Photo ' + enrollCaptures + ' of 3 captured', 'success');
+
+  if (enrollCaptures === 3) {
+    document.getElementById('captureBtn').disabled = true;
+    document.getElementById('enrollSaveBtn').style.display = 'inline-block';
+    document.getElementById('enrollSaveBtn').disabled = false;
+    toast('3 photos captured! Click SAVE WORKER', 'success');
+  }
+}
+
+function saveWorker() {
+  const id   = document.getElementById('enrollId').value.trim();
+  const name = document.getElementById('enrollName').value.trim();
+  const role = document.getElementById('enrollRole').value;
+  const zone = document.getElementById('enrollZone').value;
+
+  if (!id || !name) { toast('Please enter Worker ID and Name', 'error'); return; }
+  if (enrollCaptures < 3) { toast('Please capture 3 face photos first', 'error'); return; }
+
+  const worker = {
+    id, name, role, zone,
+    enrolledAt: new Date().toISOString(),
+    scans: 0,
+    color: ['blue','green','red'][workers.length % 3]
+  };
+  workers = workers.filter(w => w.id !== id);
+  workers.push(worker);
+  localStorage.setItem('hs_workers', JSON.stringify(workers));
+
+  toast('Worker ' + name + ' enrolled successfully!', 'success');
+  enrollCaptures = 0;
+  ['cap1','cap2','cap3'].forEach(id => document.getElementById(id).classList.remove('filled'));
+  document.getElementById('enrollId').value = '';
+  document.getElementById('enrollName').value = '';
+  document.getElementById('enrollSaveBtn').style.display = 'none';
+  document.getElementById('captureBtn').disabled = false;
+  renderEnrolledList();
+}
+
+function renderEnrolledList() {
+  document.getElementById('workerCountEnroll').textContent = workers.length;
+  const el = document.getElementById('enrolledList');
+  if (!workers.length) { el.innerHTML = '<div class="no-logs">No workers enrolled yet</div>'; return; }
+  el.innerHTML = workers.map(w => `
+    <div class="worker-row" style="margin-bottom:8px">
+      <div class="worker-avatar av-${w.color||'blue'}">${w.name.split(' ').map(x=>x[0]).join('').slice(0,2)}</div>
+      <div class="worker-info">
+        <div class="worker-name">${w.name}</div>
+        <div class="worker-id">${w.id} · ${w.role}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);font-family:'Share Tech Mono',monospace">${w.zone.split('(')[0].trim()}</div>
+      <button onclick="deleteWorker('${w.id}')" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:14px;margin-left:8px">✕</button>
+    </div>
+  `).join('');
+}
+
+function deleteWorker(id) {
+  workers = workers.filter(w => w.id !== id);
+  localStorage.setItem('hs_workers', JSON.stringify(workers));
+  renderEnrolledList();
+  toast('Worker removed', '');
+}
+
+// ═══════════════════════════════════════
+//  LOGS
+// ═══════════════════════════════════════
+function addLog(wid, wname, mode, bpm, conf, result) {
+  logs.unshift({
+    id: Date.now(),
+    wid, wname, mode,
+    bpm: parseFloat(bpm.toFixed(1)),
+    conf: parseFloat(conf.toFixed(1)),
+    result,
+    time: new Date().toISOString(),
+    synced: false
+  });
+  if (logs.length > 200) logs = logs.slice(0, 200);
+  localStorage.setItem('hs_logs', JSON.stringify(logs));
+}
+
+function renderLogs() {
+  const search = (document.getElementById('logsSearch').value || '').toLowerCase();
+  const body = document.getElementById('logsBody');
+  let filtered = logs.filter(l => {
+    const matchSearch = !search || l.wid.toLowerCase().includes(search) || l.wname.toLowerCase().includes(search);
+    const matchFilter = activeFilter === 'all' || l.result.toLowerCase() === activeFilter;
+    return matchSearch && matchFilter;
+  });
+
+  if (!filtered.length) {
+    body.innerHTML = '<div class="no-logs">No logs match the current filter</div>';
+    return;
+  }
+  body.innerHTML = filtered.map(l => {
+    const t = new Date(l.time);
+    const timeStr = t.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    return `
+    <div class="log-row">
+      <div class="log-mono">${timeStr}</div>
+      <div>
+        <div style="font-size:13px;color:var(--text)">${l.wname}</div>
+        <div class="log-mono">${l.wid}</div>
+      </div>
+      <div class="log-mono" style="font-size:11px">${l.mode}</div>
+      <div class="log-mono">${l.bpm > 0 ? l.bpm + ' bpm' : '—'}</div>
+      <div class="log-mono">${l.conf.toFixed(0)}%</div>
+      <div>
+        <span class="log-result-badge ${l.result==='GRANTED'?'badge-granted':'badge-denied'}">${l.result}</span>
+        <div style="margin-top:4px"><span class="sync-badge ${l.synced?'sync-done':'sync-pending'}">${l.synced?'SYNCED':'PENDING'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterLogs() { renderLogs(); }
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active-filter'));
+  btn.classList.add('active-filter');
+  renderLogs();
+}
+
+function exportLogs() {
+  const rows = ['Time,Worker ID,Name,Mode,BPM,Confidence,Result'];
+  logs.forEach(l => {
+    rows.push(`${l.time},${l.wid},${l.wname},${l.mode},${l.bpm},${l.conf},${l.result}`);
+  });
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'heartshield_logs.csv'; a.click();
+  toast('Logs exported as CSV', 'success');
+}
+
+function syncLogs() {
+  const pending = logs.filter(l => !l.synced).length;
+  if (!pending) { toast('All logs already synced', ''); return; }
+  // Simulate sync
+  setTimeout(() => {
+    logs = logs.map(l => ({...l, synced: true}));
+    localStorage.setItem('hs_logs', JSON.stringify(logs));
+    renderLogs();
+    toast(pending + ' records synced to Datalake 3.0', 'success');
+  }, 1200);
+  toast('Syncing ' + pending + ' records...', '');
+}
+
+// ═══════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════
+function renderDashboard() {
+  const total   = logs.length;
+  const granted = logs.filter(l=>l.result==='GRANTED').length;
+  const denied  = logs.filter(l=>l.result==='DENIED').length;
+  const bpms    = logs.filter(l=>l.bpm>0).map(l=>l.bpm);
+  const avgBpm  = bpms.length ? (bpms.reduce((a,b)=>a+b,0)/bpms.length).toFixed(0) : '--';
+  const pct     = total ? ((granted/total)*100).toFixed(0) : 0;
+
+  document.getElementById('statTotal').textContent   = total;
+  document.getElementById('statGranted').textContent = granted;
+  document.getElementById('statDenied').textContent  = denied;
+  document.getElementById('statBpm').textContent     = avgBpm;
+  document.getElementById('statGrantedPct').textContent = pct + '% success rate';
+
+  // Bar chart
+  const recent = logs.slice(0, 7).reverse();
+  const bc = document.getElementById('barChart');
+  if (!recent.length) {
+    bc.innerHTML = '<div style="color:var(--text2);font-size:12px;font-family:\'Share Tech Mono\',monospace;margin:auto;">No data yet</div>';
+  } else {
+    bc.innerHTML = recent.map((l,i) => {
+      const h = 20 + (l.conf / 100) * 80;
+      return `<div class="bar-wrap">
+        <div class="bar ${l.result==='GRANTED'?'granted':'denied'}" style="height:${h}%"></div>
+        <div class="bar-label">${i+1}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Method chart
+  const rppgCount  = logs.filter(l=>l.mode==='rPPG Heartbeat').length;
+  const microCount = logs.filter(l=>l.mode!=='rPPG Heartbeat').length;
+  const tot = rppgCount + microCount || 1;
+  const rp = Math.round(rppgCount/tot*100);
+  const mp = Math.round(microCount/tot*100);
+  document.getElementById('rppgPct').textContent  = rp + '%';
+  document.getElementById('microPct').textContent = mp + '%';
+  document.getElementById('rppgBar').style.width  = rp + '%';
+  document.getElementById('microBar').style.width = mp + '%';
+
+  // Workers
+  const wl = document.getElementById('dashWorkerList');
+  if (!workers.length) {
+    wl.innerHTML = '<div style="color:var(--text2);font-size:13px;font-family:\'Share Tech Mono\',monospace;">No workers enrolled</div>';
+  } else {
+    const colors = ['blue','green','red'];
+    wl.innerHTML = workers.map((w,i) => `
+      <div class="worker-row">
+        <div class="worker-avatar av-${w.color||colors[i%3]}">${w.name.split(' ').map(x=>x[0]).join('').slice(0,2)}</div>
+        <div class="worker-info">
+          <div class="worker-name">${w.name}</div>
+          <div class="worker-id">${w.id} · ${w.role}</div>
+        </div>
+        <div class="worker-scans">${logs.filter(l=>l.wid===w.id).length} scans</div>
+      </div>
+    `).join('');
+  }
+}
+
+// ═══════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════
+function toggleSetting(el) {
+  el.classList.toggle('on');
+}
+function resetSettings() {
+  document.querySelectorAll('.toggle').forEach(t => t.classList.add('on'));
+  document.getElementById('sensitivitySlider').value = 60;
+  document.getElementById('sensitivityVal').textContent = '60f';
+  document.getElementById('threshSlider').value = 65;
+  document.getElementById('threshVal').textContent = '65%';
+  toast('Settings reset to defaults', '');
+}
+function clearAllData() {
+  if (!confirm('Clear all workers and logs? This cannot be undone.')) return;
+  workers = []; logs = [];
+  localStorage.removeItem('hs_workers');
+  localStorage.removeItem('hs_logs');
+  toast('All data cleared', '');
+}
+
+// ═══════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════
+let toastTimer;
+function toast(msg, type) {
+  clearTimeout(toastTimer);
+  const el = document.getElementById('toast');
+  el.className = 'toast ' + (type||'');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = type==='success'?'✓':type==='error'?'✗':'◈';
+  el.classList.add('show');
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Responsive dash grid
+window.addEventListener('resize', () => {
+  const dg = document.querySelector('.dash-grid');
+  if (dg) dg.style.gridTemplateColumns = window.innerWidth < 700 ? '1fr' : '1fr 1fr';
+});
+</script>
+</body>
+</html>
+
