@@ -78,7 +78,7 @@ class HomeScreen extends StatelessWidget {
                 ]),
               ]),
 
-              const SizedBox(height: 48),
+              const SizedBox(height: 32),
 
               // Offline badge
               Container(
@@ -110,7 +110,7 @@ class HomeScreen extends StatelessWidget {
 
               const Spacer(),
 
-              // Main action buttons
+              // START SCANNER button — goes directly to scanner, no popup
               _ActionButton(
                 label: 'START SCANNER',
                 subtitle: 'Scan face with heartbeat detection',
@@ -128,27 +128,28 @@ class HomeScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
 
+              // ENROLL WORKER — shows info then navigates
               _ActionButton(
                 label: 'ENROLL WORKER',
                 subtitle: 'Register a new NHAI worker',
                 icon: Icons.person_add_outlined,
                 color: const Color(0xFF00E096),
-                onTap: () => _showEnrollDialog(context),
+                onTap: () => _showEnrollInfo(context),
               ),
 
               const SizedBox(height: 12),
 
+              // VIEW LOGS — shows log screen
               _ActionButton(
                 label: 'VIEW LOGS',
                 subtitle: 'Access logs stored offline',
                 icon: Icons.list_alt_outlined,
                 color: const Color(0xFF7AA8C0),
-                onTap: () => _showLogsInfo(context),
+                onTap: () => _showLogsScreen(context),
               ),
 
               const SizedBox(height: 24),
 
-              // Footer
               Center(
                 child: Text(
                   'Submission Deadline: 05 June 2026',
@@ -166,6 +167,7 @@ class HomeScreen extends StatelessWidget {
   void _showResult(BuildContext context, HeartShieldResult result) {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF0A1520),
         shape: RoundedRectangleBorder(
@@ -177,27 +179,26 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         title: Text(
-          result.faceVerified ? 'ACCESS GRANTED' : 'ACCESS DENIED',
+          result.faceVerified ? '✅ ACCESS GRANTED' : '🚫 ACCESS DENIED',
           style: TextStyle(
             color: result.faceVerified
                 ? const Color(0xFF00E096)
                 : const Color(0xFFFF3D71),
-            letterSpacing: 1.5,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(result.faceVerified ? '✅' : '🚫', style: const TextStyle(fontSize: 48)),
-          const SizedBox(height: 12),
           if (result.workerName != null)
             Text(result.workerName!,
                 style: const TextStyle(color: Color(0xFFE8F4F8), fontSize: 16)),
+          const SizedBox(height: 8),
           if (result.heartbeatBpm != null)
             Text('Heartbeat: ${result.heartbeatBpm!.toStringAsFixed(0)} BPM',
                 style: const TextStyle(color: Color(0xFF7AA8C0), fontSize: 13)),
           Text('Confidence: ${(result.confidence * 100).toStringAsFixed(1)}%',
               style: const TextStyle(color: Color(0xFF7AA8C0), fontSize: 13)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
@@ -211,7 +212,7 @@ class HomeScreen extends StatelessWidget {
         ]),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('CLOSE', style: TextStyle(color: Color(0xFF00E5FF))),
           ),
         ],
@@ -219,54 +220,109 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _showEnrollDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF0A1520),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFF00E096)),
-        ),
-        title: const Text('Enroll Worker',
-            style: TextStyle(color: Color(0xFF00E096), letterSpacing: 1)),
-        content: const Text(
-          'To enroll workers with face data, run the Python enrollment script on your laptop:\n\npython enroll_worker.py\n\nThe enrolled face data syncs to the app automatically.',
-          style: TextStyle(color: Color(0xFF7AA8C0), fontSize: 13, height: 1.5),
-        ),
-        actions: [
-          TextButton(
+  void _showEnrollInfo(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => Scaffold(
+        backgroundColor: const Color(0xFF050A0F),
+        appBar: AppBar(
+          title: const Text('ENROLL WORKER',
+              style: TextStyle(color: Color(0xFF00E096), letterSpacing: 2)),
+          backgroundColor: const Color(0xFF0A1520),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5FF)),
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Color(0xFF00E5FF))),
           ),
-        ],
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFF00E096).withOpacity(0.3)),
+                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF0A1520),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                  Text('HOW TO ENROLL WORKERS',
+                      style: TextStyle(color: Color(0xFF00E096), fontSize: 13,
+                          fontWeight: FontWeight.bold, letterSpacing: 2)),
+                  SizedBox(height: 16),
+                  Text('Step 1',
+                      style: TextStyle(color: Color(0xFF00E5FF), fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text('On your laptop, run:\npython enroll_worker.py',
+                      style: TextStyle(color: Color(0xFF7AA8C0), fontSize: 13, height: 1.6)),
+                  SizedBox(height: 12),
+                  Text('Step 2',
+                      style: TextStyle(color: Color(0xFF00E5FF), fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text('Enter Worker ID and Name',
+                      style: TextStyle(color: Color(0xFF7AA8C0), fontSize: 13, height: 1.6)),
+                  SizedBox(height: 12),
+                  Text('Step 3',
+                      style: TextStyle(color: Color(0xFF00E5FF), fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text('Look at webcam and press SPACE to capture face',
+                      style: TextStyle(color: Color(0xFF7AA8C0), fontSize: 13, height: 1.6)),
+                  SizedBox(height: 12),
+                  Text('Step 4',
+                      style: TextStyle(color: Color(0xFF00E5FF), fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text('Face data syncs to app automatically when connected',
+                      style: TextStyle(color: Color(0xFF7AA8C0), fontSize: 13, height: 1.6)),
+                ]),
+              ),
+            ],
+          ),
+        ),
       ),
-    );
+    ));
   }
 
-  void _showLogsInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF0A1520),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFF00E5FF)),
-        ),
-        title: const Text('Access Logs',
-            style: TextStyle(color: Color(0xFF00E5FF), letterSpacing: 1)),
-        content: const Text(
-          'All access logs are stored offline in SQLite on the device.\n\nLogs include:\n• Worker ID and name\n• Timestamp\n• BPM reading\n• Liveness mode used\n• Access result\n\nLogs sync to NHAI Datalake 3.0 when internet is available.',
-          style: TextStyle(color: Color(0xFF7AA8C0), fontSize: 13, height: 1.5),
-        ),
-        actions: [
-          TextButton(
+  void _showLogsScreen(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => Scaffold(
+        backgroundColor: const Color(0xFF050A0F),
+        appBar: AppBar(
+          title: const Text('ACCESS LOGS',
+              style: TextStyle(color: Color(0xFF00E5FF), letterSpacing: 2)),
+          backgroundColor: const Color(0xFF0A1520),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5FF)),
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Color(0xFF00E5FF))),
           ),
-        ],
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.list_alt_outlined, color: Color(0xFF00E5FF), size: 64),
+              const SizedBox(height: 16),
+              const Text('All logs stored offline',
+                  style: TextStyle(color: Color(0xFFE8F4F8), fontSize: 16)),
+              const SizedBox(height: 8),
+              const Text('SQLite database on device',
+                  style: TextStyle(color: Color(0xFF7AA8C0), fontSize: 13)),
+              const SizedBox(height: 8),
+              const Text('Syncs to NHAI Datalake 3.0\nwhen internet is available',
+                  style: TextStyle(color: Color(0xFF7AA8C0), fontSize: 13, height: 1.6),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFF00E096)),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text('● 100% OFFLINE',
+                    style: TextStyle(color: Color(0xFF00E096), fontSize: 12, letterSpacing: 1.5)),
+              ),
+            ],
+          ),
+        ),
       ),
-    );
+    ));
   }
 }
 
